@@ -1,35 +1,52 @@
 #!/bin/bash
 
-# 1. Install Homebrew if not present
+# 1. Setup Homebrew Path (Crucial for Apple Silicon Macs)
+if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+# 2. Install Homebrew if not present
 if ! command -v brew &> /dev/null; then
     echo "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
 else
-    echo "Homebrew already installed. Updating..."
-    brew update
+    echo "Homebrew already installed."
 fi
 
-# 2. Install rbenv and ruby-build
-echo "Installing rbenv and ruby-build..."
+# 3. Install rbenv and ruby-build
+echo "Updating/Installing rbenv..."
 brew install rbenv ruby-build
 
-# 3. Set up rbenv in your shell (zsh is default for macOS)
-if ! grep -q 'eval "$(rbenv init -)"' ~/.zshrc; then
+# 4. Clean up .zshrc and add correct rbenv hooks
+# We use a block to ensure we don't duplicate lines every time the script runs
+if ! grep -q 'rbenv init' ~/.zshrc; then
+    echo 'Appending rbenv config to ~/.zshrc...'
+    echo '' >> ~/.zshrc
+    echo '# rbenv setup' >> ~/.zshrc
+    echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.zshrc
     echo 'eval "$(rbenv init -)"' >> ~/.zshrc
-    echo "Added rbenv to ~/.zshrc"
 fi
+
+# 5. Initialize rbenv for the CURRENT script process
+export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 
-# 4. Install Ruby 3.4.1 (Latest stable version)
-# Note: Ruby 3.4.8 is not yet released. 
+# 6. Install Ruby 3.4.1
 TARGET_VERSION="3.4.1"
+if ! rbenv versions | grep -q "$TARGET_VERSION"; then
+    echo "Installing Ruby $TARGET_VERSION (this may take a few minutes)..."
+    rbenv install $TARGET_VERSION
+else
+    echo "Ruby $TARGET_VERSION is already installed."
+fi
 
-echo "Installing Ruby $TARGET_VERSION..."
-rbenv install $TARGET_VERSION
-
-# 5. Set as global version
+# 7. Set Global and Rehash
 rbenv global $TARGET_VERSION
+rbenv rehash
 
-echo "Installation complete!"
-echo "Please restart your terminal or run 'source ~/.zshrc'"
-ruby -v
+echo "------------------------------------------------"
+echo "✅ Installation complete!"
+echo "IMPORTANT: Run the command below to update your current terminal:"
+echo "source ~/.zshrc"
+echo "------------------------------------------------"
